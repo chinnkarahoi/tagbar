@@ -49,10 +49,39 @@ function! s:init_var(var, value) abort
 endfunction
 
 function! s:setup_options() abort
-    if !exists('g:tagbar_vertical') || g:tagbar_vertical == 0
-        let previewwin_pos = 'topleft'
+    if exists('g:tagbar_position')
+        " Map older deprecated values to correct values
+        if g:tagbar_position ==# 'top'
+            let g:tagbar_position = 'leftabove'
+        elseif g:tagbar_position ==# 'bottom'
+            let g:tagbar_position = 'rightbelow'
+        elseif g:tagbar_position ==# 'left'
+            let g:tagbar_position = 'topleft vertical'
+        elseif g:tagbar_position ==# 'right'
+            let g:tagbar_position = 'botright vertical'
+        endif
+        if g:tagbar_position !~# 'vertical'
+            let previewwin_pos = 'rightbelow vertical'
+        else
+            let previewwin_pos = 'topleft'
+        endif
+        let default_pos = g:tagbar_position
     else
-        let previewwin_pos = 'rightbelow vertical'
+        if exists('g:tagbar_vertical') && g:tagbar_vertical > 0
+            let previewwin_pos = 'rightbelow vertical'
+            if exists('g:tagbar_left') && g:tagbar_left
+                let default_pos = 'leftabove'
+            else
+                let default_pos = 'rightbelow'
+            endif
+            let g:tagbar_height = g:tagbar_vertical
+        elseif exists('g:tagbar_left') && g:tagbar_left
+            let previewwin_pos = 'topleft'
+            let default_pos = 'topleft vertical'
+        else
+            let previewwin_pos = 'topleft'
+            let default_pos = 'botright vertical'
+        endif
     endif
     let options = [
         \ ['autoclose', 0],
@@ -64,8 +93,10 @@ function! s:setup_options() abort
         \ ['expand', 0],
         \ ['foldlevel', 99],
         \ ['hide_nonpublic', 0],
+        \ ['height', 10],
         \ ['indent', 2],
         \ ['left', 0],
+        \ ['position', default_pos],
         \ ['previewwin_pos', previewwin_pos],
         \ ['show_balloon', 1],
         \ ['show_visibility', 1],

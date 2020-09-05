@@ -879,17 +879,15 @@ function! s:OpenWindow(flags) abort
     endif
 
     let s:window_opening = 1
-    if g:tagbar_vertical == 0
+    if g:tagbar_position =~# 'vertical'
+        let size = g:tagbar_width
         let mode = 'vertical '
-        let openpos = g:tagbar_left ? 'topleft ' : 'botright '
-        let width = g:tagbar_width
     else
+        let size = g:tagbar_height
         let mode = ''
-        let openpos = g:tagbar_left ? 'leftabove ' : 'rightbelow '
-        let width = g:tagbar_vertical
     endif
-    exe 'silent keepalt ' . openpos . mode . width . 'split ' . s:TagbarBufName()
-    exe 'silent ' . mode . 'resize ' . width
+    exe 'silent keepalt ' . g:tagbar_position . size . 'split ' . s:TagbarBufName()
+    exe 'silent ' . mode . 'resize ' . size
     unlet s:window_opening
 
     call s:InitWindow(autoclose)
@@ -1027,6 +1025,7 @@ function! s:CloseWindow() abort
             " Other windows are open, only close the tagbar one
 
             let curfile = tagbar#state#get_current_file(0)
+            let s:is_maximized = 0
 
             close
 
@@ -1308,9 +1307,9 @@ function! s:ExecuteCtagsOnFile(fname, realfname, typeinfo) abort
 
         " universal-ctags deprecated this argument name
         if s:ctags_is_uctags
-            let ctags_args += [ '--extras=' ]
+            let ctags_args += [ '--extras=+F' ]
         else
-            let ctags_args += [ '--extra=' ]
+            let ctags_args += [ '--extra=', '--file-scope=yes' ]
         endif
 
         let ctags_args  = ctags_args + [
@@ -1319,7 +1318,6 @@ function! s:ExecuteCtagsOnFile(fname, realfname, typeinfo) abort
                           \ '--format=2',
                           \ '--excmd=pattern',
                           \ '--fields=nksSaf',
-                          \ '--file-scope=yes',
                           \ '--sort=no',
                           \ '--append=no'
                           \ ]
@@ -2243,7 +2241,7 @@ function! s:JumpToTag(stay_in_tagbar) abort
         call cursor(taginfo.fields.line, taginfo.fields.column)
     else
         call cursor(taginfo.fields.line, 1)
-        call search(taginfo.name, 'c', line('.'))
+        call search('\V' . taginfo.name, 'c', line('.'))
     endif
 
     normal! zv
@@ -2287,7 +2285,7 @@ function! s:ShowInPreviewWin() abort
     " We want the preview window to be relative to the file window in normal
     " (horizontal) mode, and relative to the Tagbar window in vertical mode,
     " to make the best use of space.
-    if g:tagbar_vertical == 0
+    if g:tagbar_position =~# 'vertical'
         call s:GotoFileWindow(taginfo.fileinfo, 1)
         call s:mark_window()
     endif
@@ -2298,7 +2296,7 @@ function! s:ShowInPreviewWin() abort
         silent execute
             \ g:tagbar_previewwin_pos . ' pedit ' .
             \ fnameescape(taginfo.fileinfo.fpath)
-        if g:tagbar_vertical != 0
+        if g:tagbar_position !~# 'vertical'
             silent execute 'vertical resize ' . g:tagbar_width
         endif
         " Remember that the preview window was opened by Tagbar so we can
@@ -2306,7 +2304,7 @@ function! s:ShowInPreviewWin() abort
         let s:pwin_by_tagbar = 1
     endif
 
-    if g:tagbar_vertical != 0
+    if g:tagbar_position !~# 'vertical'
         call s:GotoFileWindow(taginfo.fileinfo, 1)
         call s:mark_window()
     endif
@@ -3199,7 +3197,7 @@ endfunction
 " s:SetStatusLine() {{{2
 function! s:SetStatusLine() abort
     let tagbarwinnr = bufwinnr(s:TagbarBufName())
-    if tagbarwinnr == -1
+    if tagbarwinnr == -1 || exists('g:tagbar_no_status_line')
         return
     endif
 
@@ -3508,6 +3506,32 @@ endfunction
 " Autoload functions {{{1
 
 " Wrappers {{{2
+function! tagbar#GetTagNearLine(lnum, ...) abort
+    if a:0 > 0
+        let fmt = a:1
+        let longsig   = a:2 =~# 's'
+        let fullpath  = a:2 =~# 'f'
+        let prototype = a:2 =~# 'p'
+    else
+        let fmt = '%s'
+        let longsig   = 0
+        let fullpath  = 0
+        let prototype = 0
+    endif
+
+    let taginfo = s:GetNearbyTag(0, 1, a:lnum)
+
+    if empty(taginfo)
+        return ''
+    endif
+
+    if prototype
+        return taginfo.getPrototype(1)
+    else
+        return printf(fmt, taginfo.str(longsig, fullpath))
+    endif
+endfunction
+
 function! tagbar#ToggleWindow(...) abort
     let flags = a:0 > 0 ? a:1 : ''
     call s:ToggleWindow(flags)
@@ -3547,6 +3571,12 @@ function! tagbar#StopAutoUpdate() abort
 endfunction
 
 " }}}2
+
+" tagbar#Update() {{{2
+" Trigger an AutoUpdate() of the currently opened file
+function! tagbar#Update() abort
+    call s:AutoUpdate(fnamemodify(expand('%'), ':p'), 0)
+endfunction
 
 " tagbar#toggle_pause() {{{2
 function! tagbar#toggle_pause() abort
@@ -3706,7 +3736,11 @@ function! tagbar#currenttagtype(fmt, default) abort
 
     let typeinfo = tag.fileinfo.typeinfo
     let plural = typeinfo.kinds[typeinfo.kinddict[kind]].long
-    let singular = s:singular_types[plural]
+    if has_key(s:singular_types, plural)
+        let singular = s:singular_types[plural]
+    else
+        let singular = plural
+    endif
     return printf(a:fmt, singular)
 endfunction
 

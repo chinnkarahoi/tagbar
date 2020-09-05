@@ -184,7 +184,7 @@ There are essentially two ways to use Tagbar:
 Opening and closing the Tagbar window~
 Use |:TagbarOpen| or |:TagbarToggle| to open the Tagbar window if it is
 closed. By default the window is opened on the right side, set the option
-|g:tagbar_left| to open it on the left instead. If the window is already open,
+|g:tagbar_position| to open it elsewhere instead. If the window is already open,
 |:TagbarOpen| will jump to it and |:TagbarToggle| will close it again.
 |:TagbarClose| will simply close the window if it is open.
 
@@ -320,6 +320,24 @@ FUNCTIONS                                                   *tagbar-functions*
     update tag information.  This should be called after you have used
     |tagbar#currenttag| manually.
 
+*tagbar#GetTagNearLine()*
+    Get the current tag near the specified line number (lnum). Optionally
+    takes a fmt and signature specification using the same method as the
+    |tagbar#currenttag()| function. Defaults to GetTagNearLine(lnum, '%s', '').
+
+    This could be used in a custom foldtext function to show the current tag
+    the fold current fold is located in.
+
+    Example:
+   >
+    set foldtext=MyFoldFunc()
+    function! MyFoldFunc()
+        let tag = tagbar#GetTagNearLine(v:foldend, '%s', 'p')
+        let lines = v:foldend - v:foldstart + 1
+        return tag . ' --- ' . lines . ' lines'
+    endfunction
+<
+
 ------------------------------------------------------------------------------
 KEY MAPPINGS                                                     *tagbar-keys*
 
@@ -426,9 +444,35 @@ This causes ctags to use settings from ~/.vim/ctags.cnf, ignoring other
 configuration files.
 
 
+                                                           *g:tagbar_position*
+g:tagbar_position~
+Default: 'botright vertical'
+
+By default the Tagbar window will be opened on the right-hand side of vim in a
+vertical split. Set this option to one of the standart vim split options such
+as 'topleft', 'botright', 'leftabove', or 'rightbelow' to open in the
+corresponding position instead. If desiring a vertically split window, then
+include a ' vertical' in the field value as well. This can be useful when
+activating Tagbar at the same time as another plugin which creates a new
+window. It allows for more granular control of the Tagbar position in
+relation to the current active window.
+
+If using a vertical split, |g:tagbar_width| will be used to determine the
+window width for the tagbar window. Else |g:tagbar_height| will be used to
+determine the window height for the tagbar window.
+
+See |split| for more details on window positioning.
+
+Example:
+>
+        let g:tagbar_position = 'leftabove'
+<
                                                                *g:tagbar_left*
 g:tagbar_left~
 Default: 0
+
+This option has been superceded by |g:tagbar_position| instead. It has been left
+around for backward compatibility.
 
 By default the Tagbar window will be opened on the right-hand side of vim. Set
 this option to open it on the left instead.
@@ -445,6 +489,9 @@ Example:
 g:tagbar_vertical~
 Default: 0
 
+This option has been superceded by |g:tagbar_height| instead. It has been left
+around for backward compatibility.
+
 If this is set to a positive value then the Tagbar window will be opened at
 the top or bottom of the Vim window instead of at the side. This can be useful
 for monitors that have been rotated into a vertical position. The value of
@@ -456,11 +503,24 @@ Example:
         let g:tagbar_vertical = 30
 <
 
+                                                             *g:tagbar_height*
+g:tagbar_height~
+Default: 0
+
+If |g:tagbar_position| does not include a 'vertical' option, then this
+value is used to determine the height of the Tagbar window.
+
+Example:
+>
+        let g:tagbar_height = 30
+<
+
                                                               *g:tagbar_width*
 g:tagbar_width~
 Default: 40
 
-Width of the Tagbar window in characters.
+If |g:tagbar_position| does include a 'vertical' options, then this value is
+used to determine the width of the Tagbar window in characters.
 
 Example:
 >
@@ -778,6 +838,19 @@ default statusline:
         endfunction
         let g:tagbar_status_func = 'TagbarStatusFunc'
 <
+                                                     *g:tagbar_no_status_line*
+g:no_status_line~
+Default: undefined
+
+This option will prevent any status line updates being done by Tagbar. Use
+this in the event where another plugin is being used to update the status
+line. If |g:tagbar_status_func| is set, then that function will never be
+called.
+
+Example:
+>
+       let g:no_status_line = 1
+<
 
                                                            *g:tagbar_silent*
 g:tagbar_silent~
@@ -789,6 +862,7 @@ about the tag is echoed out. Set this option to disable that behavior.
 Example:
 >
         let g:tagbar_silent = 1
+<
                                                            *g:tagbar_use_cache*
 g:tagbar_use_cache~
 Default: 1
