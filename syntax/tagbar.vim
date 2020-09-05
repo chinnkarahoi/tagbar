@@ -14,10 +14,10 @@ endif
 let s:ics = escape(join(g:tagbar_iconchars, ''), ']^\-')
 
 let s:pattern = '\(^[' . s:ics . '] \?\)\@3<=[^-+: ]\+[^:]\+$'
-execute "syntax match TagbarKind '" . s:pattern . "'"
+" execute "syntax match TagbarKind '" . s:pattern . "'"
 
 let s:pattern = '\(\S\@<![' . s:ics . '][-+# ]\?\)\@<=[^*(]\+\(\*\?\(([^)]\+)\)\? :\)\@='
-execute "syntax match TagbarScope '" . s:pattern . "'"
+" execute "syntax match TagbarScope '" . s:pattern . "'"
 
 let s:pattern = '\S\@<![' . s:ics . ']\([-+# ]\?\)\@='
 execute "syntax match TagbarFoldIcon '" . s:pattern . "'"
